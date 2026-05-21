@@ -1,0 +1,8 @@
+-- CreateTable
+CREATE TABLE "Reminder" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "task" TEXT NOT NULL,
+    "schedule" TEXT NOT NULL,
+    "chatId" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
