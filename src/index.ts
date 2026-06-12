@@ -1,8 +1,5 @@
 import { Hono } from "hono";
-import dotenv from "dotenv";
 import telegramRouter from "./telegram/webhook";
-
-dotenv.config();
 
 const app = new Hono();
 

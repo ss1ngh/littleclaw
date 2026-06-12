@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { generateAIResponse } from "../services/openai";
 import { createReminder } from "../tools/reminder";
+import { parseDateTime } from "../lib/parseDateTime";
 
 const telegramRouter = new Hono();
 
@@ -32,7 +33,20 @@ telegramRouter.post("/webhook", async (c) => {
   }
 
   //generate AI response
-  const aiResponse = await generateAIResponse(incomingMessage);
+  let aiResponse: string;
+  try {
+    aiResponse = await generateAIResponse(incomingMessage);
+  } catch (error) {
+    console.error("AI call failed:", error);
+    await axios.post(
+      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        chat_id: chatID,
+        text: "Oops, can you repeat? I zoned out",
+      },
+    );
+    return c.json({ success: false, error: "AI call failed" });
+  }
 
   console.log("AI RAW RESPONSE:");
   console.log(JSON.stringify(aiResponse));
@@ -45,20 +59,68 @@ telegramRouter.post("/webhook", async (c) => {
       const parsed = JSON.parse(cleanedResponse);
 
       if (parsed.tool === "createReminder") {
-        await createReminder(parsed.arguments?.task, String(chatID));
+        const task = parsed.arguments?.task ?? "";
+        const dateTimeStr = parsed.arguments?.dateTime;
+        const preAlerts = parsed.arguments?.preAlerts;
 
-        // Send Telegram confirmation
+        let scheduledAt: Date | undefined;
+        if (dateTimeStr) {
+          const parsedDate = parseDateTime(dateTimeStr);
+          if (parsedDate) scheduledAt = parsedDate.date;
+        }
+
+        await createReminder(task, String(chatID), scheduledAt, preAlerts);
+
+        let confirmText = "Got it babe, I'll remind you";
+        if (scheduledAt) {
+          confirmText = `Reminder set: "${task}" on ${scheduledAt.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`;
+        }
+
         await axios.post(
           `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
           {
             chat_id: chatID,
-            text: "Got it babe 💛 Reminder saved successfully.",
+            text: confirmText,
           },
         );
 
         return c.json({
           success: true,
         });
+      }
+
+      if (parsed.tool === "createTodo") {
+        await axios.post(
+          `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+          {
+            chat_id: chatID,
+            text: "Got it babe 💛 I'll track that for you.",
+          },
+        );
+        return c.json({ success: true });
+      }
+
+      if (parsed.tool === "updateTodoProgress") {
+        await axios.post(
+          `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+          {
+            chat_id: chatID,
+            text: "Updated your progress, love 💪",
+          },
+        );
+        return c.json({ success: true });
+      }
+
+      if (parsed.tool === "webSearch") {
+        // TODO: implement later
+        await axios.post(
+          `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+          {
+            chat_id: chatID,
+            text: "Let me look that up for you...",
+          },
+        );
+        return c.json({ success: true });
       }
     } catch (error) {
       console.log("Invalid JSON tool call.");

@@ -15,9 +15,8 @@
   "dependencies": {
     "@prisma/client": "6.15",
     "axios": "^1.16.1",
-    "dotenv": "^17.4.2",
+    "chrono-node": "^2.9.1",
     "hono": "^4.12.21",
-    "littleclaw": ".",
     "openai": "^6.38.0",
     "prisma": "6.15"
   }

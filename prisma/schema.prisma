@@ -8,9 +8,33 @@ datasource db {
 }
 
 model Reminder {
-    id        Int      @id @default(autoincrement())
-    task      String
-    schedule  String
-    chatId    String
-    createdAt DateTime @default(now())
+    id             Int      @id @default(autoincrement())
+    task           String
+    chatId         String
+    scheduledAt    DateTime
+    status         String   @default("pending") // "pending" | "completed" | "cancelled"
+    preAlerts      String   @default("[]") // JSON array of minutes-before, e.g. "[45,10]"
+    createdAt      DateTime @default(now())
+
+    @@index([status, scheduledAt])
+}
+
+model Todo {
+    id               Int        @id @default(autoincrement())
+    chatId           String
+    title            String                               
+    originalMessage  String                               
+    items            String    @default("[]")              
+    completedItems   String    @default("[]")              
+    progress         Int       @default(0)                 
+    deadline         DateTime
+    priority         String    @default("medium")           
+    status           String    @default("active")           
+    lastCheckedIn    DateTime?                            
+    checkInCount     Int       @default(0)                
+    createdAt        DateTime  @default(now())
+    completedAt      DateTime?    
+
+    @@index([chatId, status])
+    @@index([deadline])
 }
